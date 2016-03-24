@@ -1,0 +1,14 @@
+﻿La génération a démarré 23/03/2016 18:13:21.
+     1>Projet "D:\Users\Benoit\Documents\Visual Studio 2015\Projects\C++\Bengougam\exemple02\exemple02.vcxproj" sur le nœud 2 (Build cible(s)).
+     1>ClCompile:
+         D:\Programmes\Microsoft Visual Studio 14.0\VC\bin\CL.exe /c /I.. /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\" /Fd"Debug\vc140.pdb" /Gd /TP /analyze- /errorReport:prompt exemple02.cpp
+         exemple02.cpp
+       Link:
+         D:\Programmes\Microsoft Visual Studio 14.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\Users\Benoit\Documents\Visual Studio 2015\Projects\C++\Bengougam\Debug\exemple02.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /Debug /PDB:"D:\Users\Benoit\Documents\Visual Studio 2015\Projects\C++\Bengougam\Debug\exemple02.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\Users\Benoit\Documents\Visual Studio 2015\Projects\C++\Bengougam\Debug\exemple02.lib" /MACHINE:X86 /SAFESEH Debug\exemple02.obj
+     1>exemple02.obj : warning LNK4075: ' /EDITANDCONTINUE' ignoré à cause de la spécification '/SAFESEH'
+         exemple02.vcxproj -> D:\Users\Benoit\Documents\Visual Studio 2015\Projects\C++\Bengougam\Debug\exemple02.exe
+     1>Génération du projet "D:\Users\Benoit\Documents\Visual Studio 2015\Projects\C++\Bengougam\exemple02\exemple02.vcxproj" terminée (Build cible(s)).
+
+La génération a réussi.
+
+Temps écoulé 00:00:02.30
