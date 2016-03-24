@@ -21,156 +21,151 @@ public:
 	float x, y, z;
 };
 
-enum eMessageType
+enum eMsgGameObj
 {
 	SetPosition,
 	GetPosition,
 };
 
-class BaseMessage
+class CoreMessage
 {
 protected: // Abstract class, constructor is protected
-	BaseMessage(int destinationObjectID, eMessageType messageTypeID)
-		: m_destObjectID(destinationObjectID)
-		, m_messageTypeID(messageTypeID)
+	CoreMessage(int targetID, eMsgGameObj messageTypeID)
+		: m_targetGameObject(targetID)
+		, m_messageType(messageTypeID)
 	{}
 
 public: // Normally this isn't public, just doing it to keep code small
-	int m_destObjectID;
-	eMessageType m_messageTypeID;
+	int m_targetGameObject;
+	eMsgGameObj m_messageType;
 };
 
-class PositionMessage : public BaseMessage
+class PositionMessage : public CoreMessage
 {
-protected: // Abstract class, constructor is protected
-	PositionMessage(int destinationObjectID, eMessageType messageTypeID,
+protected: // Classe mère poru les messages de type Get/Set position 
+	PositionMessage(int targetID, eMsgGameObj messageType,
 		float X = 0.0f, float Y = 0.0f, float Z = 0.0f)
-		: BaseMessage(destinationObjectID, messageTypeID)
+		: CoreMessage(targetID, messageType)
 		, x(X)
 		, y(Y)
 		, z(Z)
-	{
-
-	}
+	{}
 
 public:
 	float x, y, z;
 };
 
-class MsgSetPosition : public PositionMessage
+class SetPositionMessage : public PositionMessage
 {
 public:
-	MsgSetPosition(int destinationObjectID, float X, float Y, float Z)
-		: PositionMessage(destinationObjectID, SetPosition, X, Y, Z)
+	SetPositionMessage(int targetID, float X, float Y, float Z)
+		: PositionMessage(targetID, SetPosition, X, Y, Z)
 	{}
 };
 
-class MsgGetPosition : public PositionMessage
+class GetPositionMessage : public PositionMessage
 {
 public:
-	MsgGetPosition(int destinationObjectID)
-		: PositionMessage(destinationObjectID, GetPosition)
+	GetPositionMessage(int targetID)
+		: PositionMessage(targetID, GetPosition)
 	{}
 };
 
-class BaseComponent
+class CoreComponent
 {
 public:
-	virtual bool SendMessage(BaseMessage* msg) { return false; }
+	virtual bool SendMessage(CoreMessage* msg) { return false; }
 };
 
-class RenderComponent : public BaseComponent
+class RenderComponent : public CoreComponent
 {
 public:
-	/*override*/ bool SendMessage(BaseMessage* msg)
+	bool SendMessage(CoreMessage* msg)
 	{
-		// Object has a switch for any messages it cares about
-		switch (msg->m_messageTypeID)
+		if (msg->m_messageType == SetPosition)
 		{
-		case SetPosition:
-		{
-			// Update render mesh position/translation
-
+			// Ici on update la position du mesh...
 			cout << "RenderComponent handling SetPosition\n";
+			return true;
 		}
-		break;
-		default:
-			return BaseComponent::SendMessage(msg);
+		else
+		{
+			return CoreComponent::SendMessage(msg); // False
 		}
-
-		return true;
 	}
 };
 
-class Object
+class GameObject
 {
 public:
-	Object(int uniqueID): m_UniqueID(uniqueID){	}
+	GameObject(int uniqueID): m_UniqueID(uniqueID){	}
 
-	int GetObjectID() const { return m_UniqueID; }
+	int GetGameObjectID() const { return m_UniqueID; }
 
-	void AddComponent(BaseComponent* comp)
+	void AddComponent(CoreComponent* comp)
 	{
 		m_Components.push_back(comp);
 	}
 
-	bool SendMessage(BaseMessage* msg)
+	bool SendMessage(CoreMessage* msg)
 	{
-		bool messageHandled = false;
+		bool isSent = false;
 
-		// Object has a switch for any messages it cares about
-		switch (msg->m_messageTypeID)
+		// GameObject has a switch for any messages it cares about
+		switch (msg->m_messageType)
 		{
 		case SetPosition:
 		{
-			MsgSetPosition* msgSetPos = static_cast<MsgSetPosition*>(msg);
+			SetPositionMessage* msgSetPos = static_cast<SetPositionMessage*>(msg);
 			m_Position.x = msgSetPos->x;
 			m_Position.y = msgSetPos->y;
 			m_Position.z = msgSetPos->z;
 
-			messageHandled = true;
-			cout << "Object handled SetPosition\n";
+			isSent = true;
+			cout << "GameObject has SetPosition\n";
 		}
 		break;
 		case GetPosition:
 		{
-			MsgGetPosition* msgSetPos = static_cast<MsgGetPosition*>(msg);
+			GetPositionMessage* msgSetPos = static_cast<GetPositionMessage*>(msg);
 			msgSetPos->x = m_Position.x;
 			msgSetPos->y = m_Position.y;
 			msgSetPos->z = m_Position.z;
 
-			messageHandled = true;
-			cout << "Object handling GetPosition\n";
+			isSent = true;
+			cout << "GameObject is trying to GetPosition\n";
 		}
 		break;
 		default:
 			return PassMessageToComponents(msg);
 		}
 
-		// If the object didn't handle the message but the component
+		// If the GameObject didn't handle the message but the component
 		// did, we return true to signify it was handled by something.
-		messageHandled |= PassMessageToComponents(msg);
+		isSent = isSent | PassMessageToComponents(msg);
 
-		return messageHandled;
+		return isSent;
 	}
 private: // Members
 	int m_UniqueID;
-	std::list<BaseComponent*> m_Components;
+	std::list<CoreComponent*> m_Components;
 	Vector3 m_Position;
-
+	Vector3 m_Velocity;
+	Vector3 m_BoundingBox;  // dx,dy,dz 
+ 
 
 private: // Methods
-	bool PassMessageToComponents(BaseMessage* msg)
+	bool PassMessageToComponents(CoreMessage* msg)
 	{
-		bool messageHandled = false;
+		bool isSent = false;
 
-		std::list<BaseComponent*>::iterator compIt = m_Components.begin();
+		std::list<CoreComponent*>::iterator compIt = m_Components.begin();
 		for (compIt; compIt != m_Components.end(); ++compIt)
 		{
-			messageHandled |= (*compIt)->SendMessage(msg);
+			isSent |= (*compIt)->SendMessage(msg);
 		}
 
-		return messageHandled;
+		return isSent;
 	}
 
 
@@ -179,60 +174,60 @@ private: // Methods
 class SceneManager
 {
 public:
-	// Returns true if the object or any components handled the message
-	bool SendMessage(BaseMessage* msg)
+	// Returns true if the GameObject or any components handled the message
+	bool SendMessage(CoreMessage* msg)
 	{
-		// We look for the object in the scene by its ID
-		std::map<int, Object*>::iterator objIt = m_Objects.find(msg->m_destObjectID);
-		if (objIt != m_Objects.end())
+		// We look for the GameObject in the scene by its ID
+		std::map<int, GameObject*>::iterator objIt = m_GameObjects.find(msg->m_targetGameObject);
+		if (objIt != m_GameObjects.end())
 		{
-			// Object was found, so send it the message
+			// GameObject was found, so send it the message
 			return objIt->second->SendMessage(msg);
 		}
 
-		// Object with the specified ID wasn't found
+		// GameObject with the specified ID wasn't found
 		return false;
 	}
 
-	Object* CreateObject()
+	GameObject* CreateGameObject()
 	{
-		Object* newObj = new Object(nextObjectID++);
-		m_Objects[newObj->GetObjectID()] = newObj;
+		GameObject* newObj = new GameObject(nextGameObjectID++);
+		m_GameObjects[newObj->GetGameObjectID()] = newObj;
 
 		return newObj;
 	}
 
 private:
-	std::map<int, Object*> m_Objects;
-	static int nextObjectID;
+	std::map<int, GameObject*> m_GameObjects;
+	static int nextGameObjectID;
 };
 
-// Initialize our static unique objectID generator
-int SceneManager::nextObjectID = 0;
+// Initialize our static unique GameObjectID generator
+int SceneManager::nextGameObjectID = 0;
 
 int main()
 {
 	// Create a scene manager
 	SceneManager sceneMgr;
 
-	// Have scene manager create an object for us, which
-	// automatically puts the object into the scene as well
-	Object* myObj = sceneMgr.CreateObject();
+	// Have scene manager create an GameObject for us, which
+	// automatically puts the GameObject into the scene as well
+	GameObject* myObj = sceneMgr.CreateGameObject();
 
 	// Create a render component
 	RenderComponent* renderComp = new RenderComponent();
 
-	// Attach render component to the object we made
+	// Attach render component to the GameObject we made
 	myObj->AddComponent(renderComp);
 
 	// Set 'myObj' position to (1, 2, 3)
-	MsgSetPosition msgSetPos(myObj->GetObjectID(), 1.0f, 2.0f, 3.0f);
+	SetPositionMessage msgSetPos(myObj->GetGameObjectID(), 1.0f, 2.0f, 3.0f);
 	sceneMgr.SendMessage(&msgSetPos);
-	cout << "Position set to (1, 2, 3) on object with ID: " << myObj->GetObjectID() << '\n';
+	cout << "Position set to (1, 2, 3) on GameObject with ID: " << myObj->GetGameObjectID() << '\n';
 
 	// Get 'myObj' position to verify it was set properly
-	cout << "Retreiving position from object with ID: " << myObj->GetObjectID() << '\n';
-	MsgGetPosition msgGetPos(myObj->GetObjectID());
+	cout << "Retreiving position from GameObject with ID: " << myObj->GetGameObjectID() << '\n';
+	GetPositionMessage msgGetPos(myObj->GetGameObjectID());
 	sceneMgr.SendMessage(&msgGetPos);
 	cout << "X: " << msgGetPos.x << '\n';
 	cout << "Y: " << msgGetPos.y << '\n';
