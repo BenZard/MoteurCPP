@@ -29,13 +29,13 @@ enum eMsgGameObj
 
 class CoreMessage
 {
-protected: // Abstract class, constructor is protected
+protected: // Classe abstraite pour les messages : un destinataire, un type de message
 	CoreMessage(int targetID, eMsgGameObj messageTypeID)
 		: m_targetGameObject(targetID)
 		, m_messageType(messageTypeID)
 	{}
 
-public: // Normally this isn't public, just doing it to keep code small
+public: 
 	int m_targetGameObject;
 	eMsgGameObj m_messageType;
 };
@@ -111,7 +111,7 @@ public:
 	{
 		bool isSent = false;
 
-		// GameObject has a switch for any messages it cares about
+		// Si on reçoit un message set ou get : deux cas 
 		switch (msg->m_messageType)
 		{
 		case SetPosition:
