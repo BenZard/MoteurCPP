@@ -84,7 +84,7 @@ public:
 	{
 		if (msg->m_messageType == SetPosition)
 		{
-			// Ici on update la position du mesh...
+			// Ici on pourra mettr eà jour la position du Mesh
 			cout << "RenderComponent handling SetPosition\n";
 			return true;
 		}
@@ -111,7 +111,7 @@ public:
 	{
 		bool isSent = false;
 
-		// Si on reçoit un message set ou get : deux cas 
+		// Si on reçoit un message set ou get : deux cas à traiter 
 		switch (msg->m_messageType)
 		{
 		case SetPosition:
@@ -140,13 +140,13 @@ public:
 			return PassMessageToComponents(msg);
 		}
 
-		// If the GameObject didn't handle the message but the component
-		// did, we return true to signify it was handled by something.
+		// Si le message est traité par un composant on renvoie true
 		isSent = isSent | PassMessageToComponents(msg);
 
 		return isSent;
 	}
-private: // Members
+
+private: 
 	int m_UniqueID;
 	std::list<CoreComponent*> m_Components;
 	Vector3 m_Position;
@@ -154,7 +154,7 @@ private: // Members
 	Vector3 m_BoundingBox;  // dx,dy,dz 
  
 
-private: // Methods
+private:
 	bool PassMessageToComponents(CoreMessage* msg)
 	{
 		bool isSent = false;
@@ -174,24 +174,26 @@ private: // Methods
 class SceneManager
 {
 public:
-	// Returns true if the GameObject or any components handled the message
+	// Returns true if the GameObject or any components handled the message.
 	bool SendMessage(CoreMessage* msg)
 	{
-		// We look for the GameObject in the scene by its ID
-		std::map<int, GameObject*>::iterator objIt = m_GameObjects.find(msg->m_targetGameObject);
-		if (objIt != m_GameObjects.end())
+	//Recherche du GameObject par son ID. 
+		std::map<int, GameObject*>::iterator gameObjIt = m_GameObjects.find(msg->m_targetGameObject);
+		if (gameObjIt != m_GameObjects.end())
 		{
-			// GameObject was found, so send it the message
-			return objIt->second->SendMessage(msg);
+			// On envoie le message au GameObject.
+			return gameObjIt->second->SendMessage(msg);
 		}
 
-		// GameObject with the specified ID wasn't found
+		// Si aucun GameObject n'a été trouvé.
 		return false;
 	}
 
+	// Fonction de création de GameObject avec ID. 
 	GameObject* CreateGameObject()
 	{
-		GameObject* newObj = new GameObject(nextGameObjectID++);
+		// remplacer le new. 
+		GameObject* newObj = new GameObject(nextID++);
 		m_GameObjects[newObj->GetGameObjectID()] = newObj;
 
 		return newObj;
@@ -199,35 +201,30 @@ public:
 
 private:
 	std::map<int, GameObject*> m_GameObjects;
-	static int nextGameObjectID;
+	static int nextID;
 };
 
-// Initialize our static unique GameObjectID generator
-int SceneManager::nextGameObjectID = 0;
+// Initialization du generateur. 
+int SceneManager::nextID = 0;
 
 int main()
 {
-	// Create a scene manager
 	SceneManager sceneMgr;
+	// On créé un nouveau game object et le place dans la scène
+	GameObject* TestGameObject = sceneMgr.CreateGameObject();
 
-	// Have scene manager create an GameObject for us, which
-	// automatically puts the GameObject into the scene as well
-	GameObject* myObj = sceneMgr.CreateGameObject();
+	// Creer le component (new à enlever plus rard) 
+	RenderComponent* renderer = new RenderComponent();
+	TestGameObject->AddComponent(renderer);
 
-	// Create a render component
-	RenderComponent* renderComp = new RenderComponent();
-
-	// Attach render component to the GameObject we made
-	myObj->AddComponent(renderComp);
-
-	// Set 'myObj' position to (1, 2, 3)
-	SetPositionMessage msgSetPos(myObj->GetGameObjectID(), 1.0f, 2.0f, 3.0f);
+	// Test Set Pos
+	SetPositionMessage msgSetPos(TestGameObject->GetGameObjectID(), 1.0f, 2.0f, 3.0f);
 	sceneMgr.SendMessage(&msgSetPos);
-	cout << "Position set to (1, 2, 3) on GameObject with ID: " << myObj->GetGameObjectID() << '\n';
+	cout << "Position set to (1, 2, 3) on GameObject with ID: " << TestGameObject->GetGameObjectID() << '\n';
 
-	// Get 'myObj' position to verify it was set properly
-	cout << "Retreiving position from GameObject with ID: " << myObj->GetGameObjectID() << '\n';
-	GetPositionMessage msgGetPos(myObj->GetGameObjectID());
+	// Test Get pos
+	cout << "Retreiving position from GameObject with ID: " << TestGameObject->GetGameObjectID() << '\n';
+	GetPositionMessage msgGetPos(TestGameObject->GetGameObjectID());
 	sceneMgr.SendMessage(&msgGetPos);
 	cout << "X: " << msgGetPos.x << '\n';
 	cout << "Y: " << msgGetPos.y << '\n';
