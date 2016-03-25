@@ -33,6 +33,14 @@ enum eMsgGameObj
 	GetPosition,
 };
 
+class Clonable
+{
+public:
+	virtual Clonable * clone() = 0;
+	virtual void reset() = 0;
+
+};
+
 class CoreMessage
 {
 protected: // Classe abstraite pour les messages : un destinataire, un type de message
@@ -78,13 +86,23 @@ public:
 };
 
 // Component peut accéder à son parent. 
-class Component
+class Component : public Clonable
 {
 private:
 	int m_ComponentID;
 	static int LastComponentID;
 public:
 	Component()
+	{
+		this->reset();
+	}
+
+	virtual Clonable* clone() 
+	{
+		return new Component();
+	}
+
+	virtual void reset()
 	{
 		m_ComponentID = LastComponentID;
 		LastComponentID++;
@@ -104,6 +122,16 @@ public:
 class RenderComponent : public Component
 {
 public:
+	Clonable* clone()
+	{
+		return new RenderComponent();
+	}
+
+	virtual void reset()
+	{
+		Component::reset();
+	}
+
 	bool SendMessage(CoreMessage* msg)
 	{
 		if (msg->m_messageType == SetPosition)
@@ -121,7 +149,7 @@ public:
 
 // fonction qui renvoie le component at un index. 
 
-class GameObject
+class GameObject : public Clonable
 {
 
 private:
@@ -149,6 +177,15 @@ protected:
 public:
 
 	GameObject()
+	{
+		this->reset();
+	}
+	virtual Clonable* clone()
+	{
+		return new GameObject();
+	}
+
+	virtual void reset()
 	{
 		m_GameObjectID = LastGameObjectID;
 		LastGameObjectID++;
@@ -224,21 +261,81 @@ public:
 
 };
 
-class Creator
-{
 
-
-};
-
+// type à mettre en paramètre dans le clonable
 class Factory
 {
 public:
-	GameObject* CreateObject(std::string type);
-	void Register(std::string type, Creator *creator);
-	std::map<std::string, Creator* > m_Factory;
-	std::map < std::string, std::vector<GameObject*> > m_Reserve;
-};
+	Factory()
+	{
 
+	}
+	static Factory Instance;
+
+	// Locker la pool pour éviter conflit entre threads. 
+	Clonable* Create(std::string type)
+	{
+		if (m_Factory.find(type) != m_Factory.end())
+		{
+			if (m_Reserve[type].size() > 0)
+			{
+				Clonable* clone = m_Reserve[type].front();
+				m_Reserve[type].pop_front();
+				return clone;
+			}
+			else
+			{
+				return m_Factory[type]->clone();
+			}
+
+		}
+		else 
+		{
+			return NULL;
+		}
+	}
+
+
+	void Register(std::string type, Clonable *original, int capacity = 200)
+	{
+
+		// Verifier l'existence das le map de ce type
+		if (m_Factory.find(type)== m_Factory.end())
+		{
+			m_Factory[type] = original; // Ajouter l'objet au map de la factory
+		}
+		else
+		{
+			return;
+		}
+		//Créer autant d'objet en réserve que la capacité à partir de l'original
+		std::list<Clonable*> pool;
+		for (int i = 0; i < capacity; i++)
+		{
+			pool.push_back(original->clone());
+		}
+		m_Reserve[type] = pool;
+		
+	}
+
+	void Repool(std::string type, Clonable * toPool)
+	{
+		toPool->reset();
+		if (m_Factory.find(type) != m_Factory.end())
+		{
+			m_Reserve[type].push_back(toPool);
+		}
+
+	}
+
+private:
+	std::map<std::string, Clonable* > m_Factory;
+	std::map< std::string, std::list<Clonable*> > m_Reserve;
+};
+// Virer le premier élément au moment de le créer
+
+// Reset on le fait au moment ou l'objet est détruit et doit être renvoyé dans la factory
+Factory Factory::Instance;
 
 
 class GOIterator
@@ -448,11 +545,15 @@ int Component::LastComponentID = 0;
 int main(int argc, char* argv[])
 {
 	GameEngine engine;
+	Factory::Instance.Register("RenderComponent", new RenderComponent);
+	Factory::Instance.Register("GameObject", new GameObject, 400);
+
 	
-	for (int i = 0; i < 100; i++)
+	for (int i = 0; i < 201; i++)
 	{
-		RenderComponent* renderer = new RenderComponent();
-		GameObject * obj = new GameObject();
+		RenderComponent* renderer = (RenderComponent*)Factory::Instance.Create("RenderComponent");
+		GameObject * obj = (GameObject*)Factory::Instance.Create("GameObject");
+
 		obj->AddComponent(renderer);
 		engine.AddObject(obj);
 	}
