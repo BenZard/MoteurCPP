@@ -272,7 +272,9 @@ public:
 	}
 	static Factory Instance;
 
+	// Améliorations
 	// Locker la pool pour éviter conflit entre threads. 
+
 	Clonable* Create(std::string type)
 	{
 		if (m_Factory.find(type) != m_Factory.end())
@@ -317,6 +319,7 @@ public:
 		m_Reserve[type] = pool;
 		
 	}
+
 
 	void Repool(std::string type, Clonable * toPool)
 	{
